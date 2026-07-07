@@ -1,8 +1,6 @@
 package com.busgo.backend.model;
-
 import jakarta.persistence.*;
 import lombok.*;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -16,39 +14,34 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String name;
-
     @Column(nullable = false, unique = true)
     private String email;
-
-    @Column(unique = true)
-    private String phoneNumber;
 
     @Column(nullable = false)
     private String password;
 
     @Column(nullable = false)
-    private String role; // PASSENGER, OPERATOR, ADMIN
+    private String fullName;
 
-    @Column(name = "wallet_balance", precision = 10, scale = 2)
+    @Column(nullable = false, unique = true)
+    private String phone;
+
+    private String avatarUrl;
+    private String nextOfKinPhone;
+    private String nextOfKinName;
+    private String nin;
+    private String dateOfBirth;
+    private String gender;
+    
     @Builder.Default
-    private BigDecimal walletBalance = BigDecimal.ZERO;
+    private Boolean kycComplete = false;
 
-    @Column(name = "created_at", updatable = false)
+    @Column(nullable = false)
+    private String role; // "USER" or "ADMIN"
+
+    @Column(updatable = false)
     private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
+    
     @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
+    protected void onCreate() { this.createdAt = LocalDateTime.now(); }
 }

@@ -1,26 +1,33 @@
 package com.busgo.backend.controller;
-
 import com.busgo.backend.dto.UserDto;
-import com.busgo.backend.service.UserService;
+import com.busgo.backend.model.User;
+import com.busgo.backend.repository.UserRepository;
+import com.busgo.backend.service.impl.AuthServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping("/v1/user")
 @RequiredArgsConstructor
 public class UserController {
+    private final UserRepository userRepository;
 
-    private final UserService userService;
-
-    @GetMapping("/me")
-    public ResponseEntity<UserDto> getCurrentUser(Authentication authentication) {
-        return ResponseEntity.ok(userService.getCurrentUser(authentication.getName()));
+    @GetMapping("/profile")
+    public ResponseEntity<UserDto> getProfile(Authentication authentication) {
+        User user = userRepository.findByEmail(authentication.getName()).orElseThrow();
+        return ResponseEntity.ok(AuthServiceImpl.mapToDto(user));
     }
 
-    @PutMapping("/me")
-    public ResponseEntity<UserDto> updateCurrentUser(Authentication authentication, @RequestBody UserDto userDto) {
-        return ResponseEntity.ok(userService.updateCurrentUser(authentication.getName(), userDto));
+    @PatchMapping("/profile")
+    public ResponseEntity<UserDto> updateProfile(@RequestBody UserDto updates, Authentication authentication) {
+        User user = userRepository.findByEmail(authentication.getName()).orElseThrow();
+        if (updates.getNextOfKinPhone() != null) user.setNextOfKinPhone(updates.getNextOfKinPhone());
+        if (updates.getNextOfKinName() != null) user.setNextOfKinName(updates.getNextOfKinName());
+        if (updates.getNin() != null) user.setNin(updates.getNin());
+        if (updates.getFullName() != null) user.setFullName(updates.getFullName());
+        userRepository.save(user);
+        return ResponseEntity.ok(AuthServiceImpl.mapToDto(user));
     }
 }
