@@ -38,7 +38,8 @@ public class AuthServiceImpl implements AuthService {
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String token = jwtUtil.generateToken(userDetails);
-        return AuthResponse.builder().user(mapToDto(user)).token(token).build();
+        String refreshToken = jwtUtil.generateRefreshToken(userDetails);
+        return AuthResponse.builder().user(mapToDto(user)).token(token).refreshToken(refreshToken).build();
     }
 
     @Override
@@ -47,7 +48,8 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByEmail(request.getEmail()).orElseThrow();
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String token = jwtUtil.generateToken(userDetails);
-        return AuthResponse.builder().user(mapToDto(user)).token(token).build();
+        String refreshToken = jwtUtil.generateRefreshToken(userDetails);
+        return AuthResponse.builder().user(mapToDto(user)).token(token).refreshToken(refreshToken).build();
     }
 
     @Override
@@ -63,12 +65,28 @@ public class AuthServiceImpl implements AuthService {
         });
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String token = jwtUtil.generateToken(userDetails);
-        return AuthResponse.builder().user(mapToDto(user)).token(token).build();
+        String refreshToken = jwtUtil.generateRefreshToken(userDetails);
+        return AuthResponse.builder().user(mapToDto(user)).token(token).refreshToken(refreshToken).build();
     }
 
     @Override
     public void forgotPassword(String email) {
         // Mock forgot password
+    }
+
+    @Override
+    public AuthResponse refreshToken(RefreshTokenRequest request) {
+        String refreshToken = request.getRefreshToken();
+        String email = jwtUtil.extractUsername(refreshToken);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+        
+        if (jwtUtil.validateToken(refreshToken, userDetails)) {
+            String token = jwtUtil.generateToken(userDetails);
+            String newRefreshToken = jwtUtil.generateRefreshToken(userDetails);
+            User user = userRepository.findByEmail(email).orElseThrow();
+            return AuthResponse.builder().user(mapToDto(user)).token(token).refreshToken(newRefreshToken).build();
+        }
+        throw new RuntimeException("Invalid refresh token");
     }
 
     public static UserDto mapToDto(User user) {

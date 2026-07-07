@@ -41,4 +41,9 @@ public class AuthController {
         authService.forgotPassword(request.get("email"));
         return ResponseEntity.ok(Map.of("success", true, "message", "Password reset link sent to your email"));
     }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(@RequestBody com.busgo.backend.dto.RefreshTokenRequest request) {
+        return ResponseEntity.ok(authService.refreshToken(request));
+    }
 }
