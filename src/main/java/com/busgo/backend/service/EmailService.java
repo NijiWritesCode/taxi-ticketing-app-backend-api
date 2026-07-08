@@ -5,4 +5,5 @@ public interface EmailService {
     void sendOtpEmail(String to, String otpCode);
     void sendTicketEmail(String to, String fullName, String pnr, String details, byte[] qrCode);
     void sendPasswordResetEmail(String toEmail, String name, String token);
+    String testEmail(String to);
 }

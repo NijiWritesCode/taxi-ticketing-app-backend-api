@@ -14,6 +14,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
+    private final com.busgo.backend.service.EmailService emailService;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
@@ -51,5 +52,10 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(@RequestBody com.busgo.backend.dto.RefreshTokenRequest request) {
         return ResponseEntity.ok(authService.refreshToken(request));
+    }
+
+    @GetMapping("/test-email")
+    public ResponseEntity<String> testEmail(@RequestParam String email) {
+        return ResponseEntity.ok(emailService.testEmail(email));
     }
 }

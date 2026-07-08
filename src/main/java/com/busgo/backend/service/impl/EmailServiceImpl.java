@@ -99,4 +99,18 @@ public class EmailServiceImpl implements EmailService {
             log.error("Failed to send Password Reset email to {}", toEmail, e);
         }
     }
+
+    @Override
+    public String testEmail(String to) {
+        try {
+            sendHtmlEmail(to, "Bruzo Diagnostic Test", "<p>If you see this, your SMTP connection from Railway is working perfectly!</p>");
+            return "SUCCESS: Email sent without errors!";
+        } catch (Exception e) {
+            String error = e.getMessage();
+            if (e.getCause() != null) {
+                error += " | Cause: " + e.getCause().getMessage();
+            }
+            return "FAILED: " + error;
+        }
+    }
 }
