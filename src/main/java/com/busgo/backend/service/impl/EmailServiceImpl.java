@@ -94,7 +94,7 @@ public class EmailServiceImpl implements EmailService {
         headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
 
         Map<String, Object> body = new HashMap<>();
-        body.put("sender", Map.of("name", "Bruzo", "email", "bruzo.noreply@gmail.com"));
+        body.put("sender", Map.of("name", "Bruzo API", "email", "nijiwritescode@gmail.com"));
         body.put("to", Collections.singletonList(Map.of("email", to)));
         body.put("subject", subject);
         body.put("htmlContent", htmlBody);
