@@ -1,25 +1,28 @@
 package com.busgo.backend.service.impl;
 
 import com.busgo.backend.service.EmailService;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class EmailServiceImpl implements EmailService {
 
-    private final JavaMailSender mailSender;
+    @Value("${brevo.api-key}")
+    private String brevoApiKey;
+
     private final TemplateEngine templateEngine;
+    private final RestTemplate restTemplate = new RestTemplate();
+    private static final String BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
     @Async
     @Override
@@ -28,7 +31,7 @@ public class EmailServiceImpl implements EmailService {
             Context context = new Context();
             context.setVariable("fullName", fullName);
             String htmlBody = templateEngine.process("welcome-email", context);
-            sendHtmlEmail(to, "Welcome to Bruzo!", htmlBody);
+            sendHtmlEmail(to, "Welcome to Bruzo!", htmlBody, null);
         } catch (Exception e) {
             log.error("Failed to send welcome email", e);
         }
@@ -41,7 +44,7 @@ public class EmailServiceImpl implements EmailService {
             Context context = new Context();
             context.setVariable("otpCode", otpCode);
             String htmlBody = templateEngine.process("otp-email", context);
-            sendHtmlEmail(to, "Your Bruzo Verification Code", htmlBody);
+            sendHtmlEmail(to, "Your Bruzo Verification Code", htmlBody, null);
         } catch (Exception e) {
             log.error("Failed to send OTP email", e);
         }
@@ -57,33 +60,17 @@ public class EmailServiceImpl implements EmailService {
             context.setVariable("details", details);
             String htmlBody = templateEngine.process("ticket-email", context);
 
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setTo(to);
-            helper.setSubject("Your Bruzo E-Ticket: " + pnr);
-            helper.setText(htmlBody, true);
-            helper.setFrom("bruzo.noreply@gmail.com");
-
+            Map<String, Object> attachment = null;
             if (qrCode != null) {
-                helper.addAttachment("Bruzo_Ticket_" + pnr + ".png", new ByteArrayResource(qrCode));
+                attachment = new HashMap<>();
+                attachment.put("name", "Bruzo_Ticket_" + pnr + ".png");
+                attachment.put("content", Base64.getEncoder().encodeToString(qrCode));
             }
 
-            mailSender.send(message);
-            log.info("Ticket Email sent to {}", to);
+            sendHtmlEmail(to, "Your Bruzo E-Ticket: " + pnr, htmlBody, attachment);
         } catch (Exception e) {
             log.error("Failed to send ticket email", e);
         }
-    }
-
-    private void sendHtmlEmail(String to, String subject, String htmlBody) throws MessagingException {
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        helper.setTo(to);
-        helper.setSubject(subject);
-        helper.setText(htmlBody, true);
-        helper.setFrom("bruzo.noreply@gmail.com");
-        mailSender.send(message);
-        log.info("Email sent successfully to {}", to);
     }
 
     @Async
@@ -94,17 +81,42 @@ public class EmailServiceImpl implements EmailService {
             context.setVariable("name", name);
             context.setVariable("token", token);
             String htmlBody = templateEngine.process("password-reset", context);
-            sendHtmlEmail(toEmail, "Bruzo - Password Reset Request", htmlBody);
+            sendHtmlEmail(toEmail, "Bruzo - Password Reset Request", htmlBody, null);
         } catch (Exception e) {
             log.error("Failed to send Password Reset email to {}", toEmail, e);
         }
     }
 
+    private void sendHtmlEmail(String to, String subject, String htmlBody, Map<String, Object> attachment) throws Exception {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("api-key", brevoApiKey);
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("sender", Map.of("name", "Bruzo", "email", "bruzo.noreply@gmail.com"));
+        body.put("to", Collections.singletonList(Map.of("email", to)));
+        body.put("subject", subject);
+        body.put("htmlContent", htmlBody);
+
+        if (attachment != null) {
+            body.put("attachment", Collections.singletonList(attachment));
+        }
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+        ResponseEntity<String> response = restTemplate.postForEntity(BREVO_API_URL, request, String.class);
+        
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            throw new RuntimeException("Brevo API error: " + response.getBody());
+        }
+        log.info("Email sent successfully to {}", to);
+    }
+
     @Override
     public String testEmail(String to) {
         try {
-            sendHtmlEmail(to, "Bruzo Diagnostic Test", "<p>If you see this, your SMTP connection from Railway is working perfectly!</p>");
-            return "SUCCESS: Email sent without errors!";
+            sendHtmlEmail(to, "Bruzo Diagnostic Test", "<p>If you see this, your Brevo HTTP API connection from Railway is working perfectly!</p>", null);
+            return "SUCCESS: Email sent without errors via Brevo API!";
         } catch (Exception e) {
             String error = e.getMessage();
             if (e.getCause() != null) {

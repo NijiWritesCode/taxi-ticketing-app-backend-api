@@ -21,16 +21,11 @@ spring:
     baseline-on-migrate: true
 
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: nijiwritescode@gmail.com
-    password: ${MAIL_PASSWORD:jlateejgchvxeegn}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
+    # Removed standard SMTP as it is blocked by Railway
+    # Migrated to Brevo HTTP API
+    
+brevo:
+  api-key: ${BREVO_API_KEY}
 
 paystack:
   secret-key: "sk_test_62a08d998b7212ca20a9d354af63fe3c1986d363"
