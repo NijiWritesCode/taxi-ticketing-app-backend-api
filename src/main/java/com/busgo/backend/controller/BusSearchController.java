@@ -1,16 +1,26 @@
 package com.busgo.backend.controller;
-import com.busgo.backend.service.ProceduralEngine;
+
+import com.busgo.backend.model.*;
+import com.busgo.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/v1/buses")
 @RequiredArgsConstructor
 public class BusSearchController {
 
-    private final ProceduralEngine proceduralEngine;
+    private final ScheduleRepository scheduleRepository;
+    private final SeatRepository seatRepository;
+    private final BookedSeatRepository bookedSeatRepository;
+    private final SeatLockRepository seatLockRepository;
 
     @GetMapping("/search")
     public ResponseEntity<Map<String, Object>> searchBuses(
@@ -18,40 +28,44 @@ public class BusSearchController {
             @RequestParam String destination,
             @RequestParam String date,
             @RequestParam int passengers) {
-        
-        Random rand = proceduralEngine.getDeterministicRandom(origin, destination, date);
-        int numBuses = rand.nextInt(6) + 3; // 3 to 8 buses
 
-        List<Map<String, Object>> results = new ArrayList<>();
-        int basePrice = (rand.nextInt(15) + 10) * 1000; // 10k to 25k
+        LocalDate parsedDate = LocalDate.parse(date);
+        LocalDateTime startOfDay = parsedDate.atStartOfDay();
+        LocalDateTime endOfDay = parsedDate.atTime(23, 59, 59);
 
-        for (int i = 0; i < numBuses; i++) {
-            Map<String, Object> bus = new HashMap<>();
-            String busId = "bus_" + Math.abs(rand.nextInt(900000) + 100000);
-            bus.put("id", busId);
-            Map<String, Object> operator = new HashMap<>();
-            operator.put("id", "op_" + i);
-            operator.put("name", (i % 2 == 0) ? "GIGM" : "God is Good Motors");
-            operator.put("logoUrl", null);
-            operator.put("rating", 4.0 + (rand.nextDouble() % 1.0));
-            operator.put("totalReviews", rand.nextInt(2000) + 100);
-            bus.put("operator", operator);
-            
-            int departureHour = rand.nextInt(14) + 6; // 6 AM to 8 PM
-            bus.put("departureTime", String.format("%02d:00 AM", departureHour)); // Mock format
-            bus.put("arrivalTime", String.format("%02d:00 PM", (departureHour + 10) % 12));
-            bus.put("duration", "10h 30m");
-            bus.put("price", basePrice + (rand.nextInt(5) * 1000));
-            bus.put("currency", "₦");
-            bus.put("busType", "AC Jet");
-            bus.put("totalSeats", 41);
-            bus.put("availableSeats", rand.nextInt(20) + 5);
-            bus.put("amenities", Map.of("ac", true, "usb", true, "wifi", false));
-            bus.put("isFastest", i == 0);
-            bus.put("isCheapest", i == 1);
-            
-            results.add(bus);
-        }
+        List<Schedule> schedules = scheduleRepository.findSchedulesByRouteAndDate(origin, destination, startOfDay, endOfDay);
+
+        List<Map<String, Object>> results = schedules.stream().map(schedule -> {
+            Bus bus = schedule.getBus();
+            Operator operator = bus.getOperator();
+
+            List<Long> bookedSeatIds = bookedSeatRepository.findBookedSeatIdsByScheduleId(schedule.getId());
+            List<Long> lockedSeatIds = seatLockRepository.findLockedSeatIdsByScheduleId(schedule.getId(), LocalDateTime.now());
+            int takenSeats = bookedSeatIds.size() + lockedSeatIds.size();
+            int availableSeats = Math.max(0, bus.getTotalSeats() - takenSeats);
+
+            Map<String, Object> operatorMap = new HashMap<>();
+            operatorMap.put("id", operator.getId());
+            operatorMap.put("name", operator.getName());
+            operatorMap.put("rating", operator.getRating());
+            operatorMap.put("totalReviews", 1200);
+
+            Map<String, Object> busMap = new HashMap<>();
+            busMap.put("id", schedule.getId()); // Frontend treats scheduleId as the unique result ID
+            busMap.put("operator", operatorMap);
+            busMap.put("departureTime", schedule.getDepartureTime().format(DateTimeFormatter.ofPattern("hh:mm a")));
+            busMap.put("arrivalTime", schedule.getArrivalTime().format(DateTimeFormatter.ofPattern("hh:mm a")));
+            busMap.put("duration", (schedule.getRoute().getEstimatedDurationMins() / 60) + "h " + (schedule.getRoute().getEstimatedDurationMins() % 60) + "m");
+            busMap.put("price", schedule.getBasePrice());
+            busMap.put("currency", "₦");
+            busMap.put("busType", bus.getBusType());
+            busMap.put("totalSeats", bus.getTotalSeats());
+            busMap.put("availableSeats", availableSeats);
+            busMap.put("amenities", Map.of("ac", true, "usb", true));
+            busMap.put("isFastest", false);
+            busMap.put("isCheapest", false);
+            return busMap;
+        }).collect(Collectors.toList());
 
         return ResponseEntity.ok(Map.of(
             "origin", origin,
@@ -61,33 +75,40 @@ public class BusSearchController {
         ));
     }
 
-    @GetMapping("/{busId}/seats")
-    public ResponseEntity<Map<String, Object>> getSeats(@PathVariable String busId) {
-        Random rand = proceduralEngine.getDeterministicRandom(busId);
-        
-        List<Map<String, Object>> seats = new ArrayList<>();
-        seats.add(Map.of("id", "seat_drv", "row", 0, "column", 0, "status", "available", "type", "driver", "price", 0, "label", "Driver"));
-        
-        for (int row = 1; row <= 10; row++) {
-            for (int col = 0; col < 4; col++) {
-                boolean isBooked = rand.nextBoolean();
-                seats.add(Map.of(
-                    "id", "seat_" + row + "_" + col,
-                    "row", row,
-                    "column", col,
-                    "status", isBooked ? "booked" : "available",
-                    "type", "standard",
-                    "price", 25000,
-                    "label", row + (col == 0 ? "A" : col == 1 ? "B" : col == 2 ? "C" : "D")
-                ));
-            }
-        }
+    @GetMapping("/{scheduleId}/seats")
+    public ResponseEntity<Map<String, Object>> getSeats(@PathVariable Long scheduleId) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+            .orElseThrow(() -> new RuntimeException("Schedule not found"));
+        Bus bus = schedule.getBus();
+
+        List<Seat> allSeats = seatRepository.findByBusId(bus.getId());
+        List<Long> bookedSeatIds = bookedSeatRepository.findBookedSeatIdsByScheduleId(schedule.getId());
+        List<Long> lockedSeatIds = seatLockRepository.findLockedSeatIdsByScheduleId(schedule.getId(), LocalDateTime.now());
+
+        List<Map<String, Object>> seats = allSeats.stream().map(seat -> {
+            boolean isBooked = bookedSeatIds.contains(seat.getId()) || lockedSeatIds.contains(seat.getId());
+            
+            String[] parts = seat.getSeatNumber().split("_");
+            int row = parts.length == 2 ? Integer.parseInt(parts[0]) : 0;
+            int col = parts.length == 2 ? Integer.parseInt(parts[1]) : 0;
+            String label = row == 0 ? "Driver" : (row + (col == 0 ? "A" : col == 1 ? "B" : col == 2 ? "C" : "D"));
+
+            Map<String, Object> seatMap = new HashMap<>();
+            seatMap.put("id", seat.getId()); // Frontend must send this as the seatId!
+            seatMap.put("row", row);
+            seatMap.put("column", col);
+            seatMap.put("status", isBooked ? "booked" : "available");
+            seatMap.put("type", seat.getSeatType());
+            seatMap.put("price", schedule.getBasePrice());
+            seatMap.put("label", label);
+            return seatMap;
+        }).collect(Collectors.toList());
 
         return ResponseEntity.ok(Map.of(
-            "busId", busId,
+            "scheduleId", scheduleId,
             "layout", Map.of(
                 "id", "layout_1",
-                "name", "Standard 41 Seater",
+                "name", bus.getBusType() + " " + bus.getTotalSeats() + " Seater",
                 "rows", 11,
                 "columns", 4,
                 "seats", seats

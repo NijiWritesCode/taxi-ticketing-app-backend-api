@@ -20,6 +20,7 @@ public class TicketService {
     private final BookingRepository bookingRepository;
     private final BookedSeatRepository bookedSeatRepository;
     private final QrCodeService qrCodeService;
+    private final EmailService emailService;
 
     @Transactional
     public void generateTicket(Booking booking) {
@@ -31,6 +32,25 @@ public class TicketService {
         ticket.setQrCodeUrl(qrCodeService.generateQrCodeBase64(qrContent));
         
         ticketRepository.save(ticket);
+
+        // Dispatch E-Ticket Email with Attachment
+        byte[] qrBytes = null;
+        try {
+            String base64Image = ticket.getQrCodeUrl().split(",")[1];
+            qrBytes = java.util.Base64.getDecoder().decode(base64Image);
+        } catch(Exception e) {}
+
+        String details = "Origin: " + booking.getSchedule().getRoute().getOrigin() + 
+                         " | Destination: " + booking.getSchedule().getRoute().getDestination() + 
+                         " | Departure: " + booking.getSchedule().getDepartureTime();
+                         
+        emailService.sendTicketEmail(
+            booking.getUser().getEmail(), 
+            booking.getUser().getFullName(), 
+            booking.getPnr(), 
+            details, 
+            qrBytes
+        );
     }
 
     public TicketResponse getTicket(Long bookingId, String userEmail) {

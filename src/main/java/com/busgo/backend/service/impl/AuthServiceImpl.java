@@ -20,6 +20,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
     private final com.busgo.backend.config.CustomUserDetailsService userDetailsService;
+    private final com.busgo.backend.service.EmailService emailService;
 
     @Override
     public AuthResponse register(RegisterRequest request) {
@@ -39,6 +40,9 @@ public class AuthServiceImpl implements AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String token = jwtUtil.generateToken(userDetails);
         String refreshToken = jwtUtil.generateRefreshToken(userDetails);
+        
+        emailService.sendWelcomeEmail(user.getEmail(), user.getFullName());
+        
         return AuthResponse.builder().user(mapToDto(user)).token(token).refreshToken(refreshToken).build();
     }
 
@@ -54,15 +58,27 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void sendOtp(String phone) {
-        // Mock OTP send
+        User user = userRepository.findByPhone(phone).orElseThrow(() -> new RuntimeException("User not found for phone: " + phone));
+        String otp = String.format("%06d", new java.util.Random().nextInt(999999));
+        user.setOtpCode(otp);
+        user.setOtpExpiry(java.time.LocalDateTime.now().plusMinutes(10));
+        userRepository.save(user);
+        emailService.sendOtpEmail(user.getEmail(), otp);
     }
 
     @Override
     public AuthResponse verifyOtp(String phone, String otp) {
-        User user = userRepository.findByEmail("adebayo@email.com").orElseGet(() -> {
-            User u = User.builder().email("adebayo@email.com").fullName("Adebayo").phone(phone).password(passwordEncoder.encode("123")).role("USER").build();
-            return userRepository.save(u);
-        });
+        User user = userRepository.findByPhone(phone).orElseThrow(() -> new RuntimeException("User not found for phone: " + phone));
+        
+        if (user.getOtpCode() == null || !user.getOtpCode().equals(otp) || user.getOtpExpiry().isBefore(java.time.LocalDateTime.now())) {
+            throw new RuntimeException("Invalid or expired OTP");
+        }
+        
+        // Clear OTP after successful use
+        user.setOtpCode(null);
+        user.setOtpExpiry(null);
+        userRepository.save(user);
+
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String token = jwtUtil.generateToken(userDetails);
         String refreshToken = jwtUtil.generateRefreshToken(userDetails);
@@ -71,7 +87,26 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void forgotPassword(String email) {
-        // Mock forgot password
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found for email: " + email));
+        String token = String.format("%06d", new java.util.Random().nextInt(999999));
+        user.setResetToken(token);
+        user.setResetTokenExpiry(java.time.LocalDateTime.now().plusMinutes(15));
+        userRepository.save(user);
+        emailService.sendPasswordResetEmail(user.getEmail(), user.getFullName(), token);
+    }
+
+    @Override
+    public void resetPassword(ResetPasswordRequest request) {
+        User user = userRepository.findByResetToken(request.getToken()).orElseThrow(() -> new RuntimeException("Invalid or expired reset token"));
+        
+        if (user.getResetTokenExpiry().isBefore(java.time.LocalDateTime.now())) {
+            throw new RuntimeException("Reset token has expired");
+        }
+        
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setResetToken(null);
+        user.setResetTokenExpiry(null);
+        userRepository.save(user);
     }
 
     @Override

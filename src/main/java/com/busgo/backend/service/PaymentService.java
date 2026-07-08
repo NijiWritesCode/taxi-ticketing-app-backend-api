@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final BookingRepository bookingRepository;
+    private final PaymentGatewayService paymentGatewayService;
 
     @Transactional
     public PaymentInitiateResponse initiatePayment(Long bookingId, String userEmail) {
@@ -28,9 +29,11 @@ public class PaymentService {
         payment.setStatus("PENDING");
         payment = paymentRepository.save(payment);
 
+        String checkoutUrl = paymentGatewayService.initiatePayment(payment.getTransactionId(), payment.getAmount(), userEmail);
+
         return PaymentInitiateResponse.builder()
                 .paymentId(payment.getId())
-                .checkoutUrl("https://mock-paystack.com/checkout/" + payment.getTransactionId())
+                .checkoutUrl(checkoutUrl)
                 .status("PENDING")
                 .build();
     }

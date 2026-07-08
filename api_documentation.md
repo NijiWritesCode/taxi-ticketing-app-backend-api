@@ -43,10 +43,34 @@ Uses a valid refresh token to issue a new set of access and refresh tokens.
 }
 ```
 
+### Webhook Verification
+**`POST /v1/payments/webhook`**
+(Secure endpoint for Paystack Server-to-Server callbacks)
+
+### Forgot Password
+**`POST /v1/auth/forgot-password`**
+Generates a 6-digit reset code and emails it to the user.
+**Body:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+### Reset Password
+**`POST /v1/auth/reset-password`**
+Consumes the 6-digit reset code and sets a new password.
+**Body:**
+```json
+{
+  "token": "123456",
+  "newPassword": "newSecurePassword123"
+}
+```
+
 ### OTP & Password Management (Mocks)
 - **`POST /v1/auth/send-otp`** (Body: `{"phone": "+234..."}`)
 - **`POST /v1/auth/verify-otp`** (Body: `{"phone": "...", "otp": "..."}`)
-- **`POST /v1/auth/forgot-password`** (Body: `{"email": "..."}`)
 
 ---
 

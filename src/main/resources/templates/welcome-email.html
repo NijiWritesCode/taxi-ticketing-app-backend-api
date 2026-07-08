@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #121212; color: #ffffff; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #1e1e1e; padding: 30px; border-radius: 12px; }
+        .header { text-align: center; color: #00d2ff; font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+        .content { font-size: 16px; line-height: 1.6; color: #e0e0e0; }
+        .btn { display: inline-block; padding: 12px 24px; background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 100%); color: #fff; text-decoration: none; border-radius: 8px; margin-top: 20px; font-weight: bold; }
+        .footer { margin-top: 40px; font-size: 12px; text-align: center; color: #777; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">Welcome to Bruzo! 🚌</div>
+    <div class="content">
+        <p>Hi <strong th:text="${fullName}">User</strong>,</p>
+        <p>We are absolutely thrilled to have you on board! Bruzo is your ultimate companion for seamless, comfortable, and affordable intercity travel across Nigeria.</p>
+        <p>Your account is now fully set up. You can start searching for buses, booking your favorite seats, and enjoying our premium ride experience right away!</p>
+        <div style="text-align: center;">
+            <a href="https://bruzo.com/app" class="btn">Explore Trips</a>
+        </div>
+    </div>
+    <div class="footer">
+        © 2026 Bruzo Technologies. All rights reserved.<br>
+        Lagos, Nigeria.
+    </div>
+</div>
+</body>
+</html>

@@ -26,20 +26,26 @@ public class AuthController {
     }
 
     @PostMapping("/send-otp")
-    public ResponseEntity<Map<String, Object>> sendOtp(@RequestBody Map<String, String> request) {
-        authService.sendOtp(request.get("phone"));
+    public ResponseEntity<Map<String, Object>> sendOtp(@RequestBody com.busgo.backend.dto.OtpRequest request) {
+        authService.sendOtp(request.getPhone());
         return ResponseEntity.ok(Map.of("success", true, "message", "OTP sent successfully"));
     }
 
     @PostMapping("/verify-otp")
-    public ResponseEntity<AuthResponse> verifyOtp(@RequestBody Map<String, String> request) {
-        return ResponseEntity.ok(authService.verifyOtp(request.get("phone"), request.get("otp")));
+    public ResponseEntity<AuthResponse> verifyOtp(@RequestBody com.busgo.backend.dto.VerifyOtpRequest request) {
+        return ResponseEntity.ok(authService.verifyOtp(request.getPhone(), request.getOtp()));
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<Map<String, Object>> forgotPassword(@RequestBody Map<String, String> request) {
-        authService.forgotPassword(request.get("email"));
+    public ResponseEntity<Map<String, Object>> forgotPassword(@RequestBody com.busgo.backend.dto.ForgotPasswordRequest request) {
+        authService.forgotPassword(request.getEmail());
         return ResponseEntity.ok(Map.of("success", true, "message", "Password reset link sent to your email"));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, Object>> resetPassword(@RequestBody com.busgo.backend.dto.ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(Map.of("success", true, "message", "Password reset successfully"));
     }
 
     @PostMapping("/refresh")

@@ -9,5 +9,6 @@ public interface AuthService {
     void sendOtp(String phone);
     AuthResponse verifyOtp(String phone, String otp);
     void forgotPassword(String email);
+    void resetPassword(com.busgo.backend.dto.ResetPasswordRequest request);
     AuthResponse refreshToken(RefreshTokenRequest request);
 }

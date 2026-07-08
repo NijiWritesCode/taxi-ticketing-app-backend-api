@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #121212; color: #ffffff; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: #1e1e1e; padding: 30px; border-radius: 12px; }
+        .header { text-align: center; color: #00e676; font-size: 24px; font-weight: bold; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        .content { font-size: 16px; line-height: 1.6; color: #e0e0e0; }
+        .ticket-card { background: #2a2a2a; padding: 20px; border-radius: 10px; margin: 20px 0; border-left: 5px solid #00e676; }
+        .pnr { font-size: 22px; font-weight: bold; color: #00e676; letter-spacing: 2px; }
+        .footer { margin-top: 40px; font-size: 12px; text-align: center; color: #777; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">Your Bruzo E-Ticket 🎟️</div>
+    <div class="content">
+        <p>Hi <strong th:text="${fullName}">Traveler</strong>,</p>
+        <p>Your booking is confirmed! Here are the details of your upcoming trip:</p>
+        
+        <div class="ticket-card">
+            <p style="margin: 0; color: #aaa; font-size: 14px;">Booking Reference (PNR)</p>
+            <div class="pnr" th:text="${pnr}">BRZ-123456</div>
+            <br>
+            <p style="margin: 0;" th:text="${details}">Trip Details</p>
+        </div>
+        
+        <p>Please present the QR Code attached to this email at the boarding terminal.</p>
+        <p>Have a safe and comfortable trip with Bruzo!</p>
+    </div>
+    <div class="footer">
+        © 2026 Bruzo Technologies. All rights reserved.<br>
+        Lagos, Nigeria.
+    </div>
+</div>
+</body>
+</html>

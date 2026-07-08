@@ -36,6 +36,18 @@ public class User {
     @Builder.Default
     private Boolean kycComplete = false;
 
+    @Column(name = "otp_code")
+    private String otpCode;
+
+    @Column(name = "otp_expiry")
+    private LocalDateTime otpExpiry;
+
+    @Column(name = "reset_token")
+    private String resetToken;
+
+    @Column(name = "reset_token_expiry")
+    private LocalDateTime resetTokenExpiry;
+
     @Column(nullable = false)
     private String role; // "USER" or "ADMIN"
 

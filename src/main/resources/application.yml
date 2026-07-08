@@ -4,9 +4,9 @@ spring:
   profiles:
     active: dev
   datasource:
-    url: jdbc:postgresql://localhost:5432/busgo
-    username: postgres
-    password: password
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/busgo}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -19,6 +19,21 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: nijiwritescode@gmail.com
+    password: "jlat eejg chvx eegn"
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+paystack:
+  secret-key: "sk_test_62a08d998b7212ca20a9d354af63fe3c1986d363"
 
 jwt:
   secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970 # Sample 256-bit secret (32 bytes hex)
