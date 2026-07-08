@@ -27,6 +27,8 @@ public class AuthServiceImpl implements AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email is already registered");
         }
+        String otp = String.format("%06d", new java.util.Random().nextInt(999999));
+
         User user = User.builder()
                 .fullName(request.getFullName())
                 .email(request.getEmail())
@@ -34,6 +36,8 @@ public class AuthServiceImpl implements AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role("USER")
                 .kycComplete(false)
+                .otpCode(otp)
+                .otpExpiry(java.time.LocalDateTime.now().plusMinutes(10))
                 .build();
         userRepository.save(user);
 
@@ -42,6 +46,7 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtUtil.generateRefreshToken(userDetails);
         
         emailService.sendWelcomeEmail(user.getEmail(), user.getFullName());
+        emailService.sendOtpEmail(user.getEmail(), otp);
         
         return AuthResponse.builder().user(mapToDto(user)).token(token).refreshToken(refreshToken).build();
     }
